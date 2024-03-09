@@ -3,3 +3,5 @@ torch==1.5.0+cpu
 flask
 flasgger
 Pillow
+gunicorn
+uvicorn
