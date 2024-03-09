@@ -1,66 +1,59 @@
 from flask import Flask, request, jsonify
-from PIL import Image
+from flasgger import Swagger, swag_from
 import io
+from PIL import Image
 import easyocr
-from flasgger import Swagger
 
 app = Flask(__name__)
 swagger = Swagger(app)
 
-# Initialize EasyOCR reader with CPU and lowest PyTorch version
-reader = easyocr.Reader(['en'], gpu=False)
-
-@app.route('/detect_text', methods=['POST'])
-def detect_text():
+@app.route('/image_to_text', methods=['POST'])
+@swag_from({
+    'parameters': [
+        {
+            'name': 'image',
+            'in': 'formData',
+            'type': 'file',
+            'required': True,
+            'description': 'The image file to be converted to text'
+        }
+    ],
+    'responses': {
+        '200': {
+            'description': 'Text extracted from the image'
+        }
+    }
+})
+def image_to_text():
     """
-    Detect text from an uploaded image.
+    Convert image to text using EasyOCR
     ---
-    parameters:
-      - name: file
-        in: formData
-        type: file
-        required: true
-        description: The image file to process
-    responses:
-      200:
-        description: Text extracted successfully
-        schema:
-          properties:
-            extracted_text:
-              type: string
-              description: The text extracted from the image
-      400:
-        description: Error if no file provided or no selected file
+    consumes:
+      - multipart/form-data
     """
-    # Check if an image file is present in the request
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file provided'}), 400
-
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
-
-    extracted_text = process_image(file)
-    if extracted_text:
-        return jsonify({'extracted_text': extracted_text}), 200
-    else:
-        return jsonify({'error': 'Failed to extract text from the image'}), 400
-
-def process_image(file):
     try:
-        # Read image from memory
-        image = Image.open(io.BytesIO(file.read()))
+        # Extract image file from request data
+        image_file = request.files['image']
 
-        # Use EasyOCR to extract text from the image
-        result = reader.readtext(image)
+        # Ensure that a file is selected
+        if image_file.filename == '':
+            return jsonify({'error': 'No selected file'})
 
-        # Concatenate all recognized text
-        extracted_text = ' '.join([text[1] for text in result])
+        # Read the image from the request data
+        img = Image.open(io.BytesIO(image_file.read()))
 
-        return extracted_text
+        # Initialize EasyOCR reader
+        reader = easyocr.Reader(['en'])
+
+        # Extract text from the image using EasyOCR
+        result = reader.readtext(img)
+
+        # Extract text from EasyOCR result
+        text = ' '.join([entry[1] for entry in result])
+
+        return jsonify({'text': text})
     except Exception as e:
-        print(f"Error processing image: {str(e)}")
-        return None
+        return jsonify({'error': 'An error occurred while processing the image', 'details': str(e)})
 
 if __name__ == '__main__':
     app.run(debug=True)

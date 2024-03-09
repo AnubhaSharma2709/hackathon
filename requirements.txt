@@ -1,6 +1,5 @@
-Flask
-Pillow
 easyocr
+torch==1.5.0+cpu
+flask
 flasgger
-uvicorn
-gunicorn
+Pillow
