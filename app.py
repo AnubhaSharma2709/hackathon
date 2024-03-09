@@ -1,13 +1,14 @@
 from flask import Flask, request, jsonify
 from PIL import Image
+import io
 import easyocr
 from flasgger import Swagger
 
 app = Flask(__name__)
 swagger = Swagger(app)
 
-# Initialize EasyOCR reader
-reader = easyocr.Reader(['en'])
+# Initialize EasyOCR reader with CPU and lowest PyTorch version
+reader = easyocr.Reader(['en'], gpu=False)
 
 @app.route('/detect_text', methods=['POST'])
 def detect_text():
@@ -47,12 +48,11 @@ def detect_text():
 
 def process_image(file):
     try:
-        # Save the image file to a temporary location
-        image_path = 'temp_image.jpg'
-        file.save(image_path)
+        # Read image from memory
+        image = Image.open(io.BytesIO(file.read()))
 
         # Use EasyOCR to extract text from the image
-        result = reader.readtext(image_path)
+        result = reader.readtext(image)
 
         # Concatenate all recognized text
         extracted_text = ' '.join([text[1] for text in result])
