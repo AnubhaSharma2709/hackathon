@@ -5,3 +5,4 @@ flasgger
 Pillow
 gunicorn
 uvicorn
+numpy==1.21.1
